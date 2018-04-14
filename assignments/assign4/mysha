@@ -1,0 +1,25 @@
+#!/usr/bin/perl -w
+
+open(ROOTFILE, $ARGV[0]) or die "Unable to open $ARGV[0]";
+
+while (<ROOTFILE>) {
+	chop;
+	$findoutput = `find $_ -type f`;
+	@fls = split("\n", $findoutput);
+	push(@files, @fls);
+}
+
+foreach $file (@files) {
+	push(@shas, `sha256sum $file`);
+}
+
+if ($#ARGV + 1 == 2) {
+	open(OUTPUT, '> '.$ARGV[1]) or die "Unable to open $ARGV[1]";
+} else {
+	*OUTPUT = *STDOUT;
+}
+
+foreach $shaline (@shas) {
+        $shaline =~ s/(\S+)\s+(\S+)/$2\t$1/;
+        print OUTPUT $shaline;
+}

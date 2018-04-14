@@ -1,0 +1,49 @@
+#!/usr/bin/perl -w
+
+# Usage: plgrep [-l] <perl regular expression> <file/directory list>
+
+# grep all occurences of the regex in the files on the command line and under the list of directories
+# if a file is not a TEXT file then the file should first be operated on by the unix command `strings`
+# [-l] : only print filename containing regex (one per line)
+# if no -l then all matching lines should be printed on the same line
+
+if ($#ARGV < 1) {
+	print "Usage: plgrep [-l] <perl regular expression> <file/directory list>\n";
+	exit;
+}
+
+$flag = shift if $ARGV[0] eq "-l";
+$regex = shift;
+
+# loop through all file/dir names
+while($name = shift) {
+	if (-d $name) { # arg is a directory
+		$find = `find $name -type f`;
+		push(@files, split(/\n/, $find));
+	} else { # arg is a file
+		push(@files, $name);
+	}
+}
+
+foreach $filepath (@files) {
+	#$filepath =~ m/([^\/]+)$/;
+	#$filename = $1;
+	if (-T $filepath) {
+		open(FILEIN, $filepath);
+		@lines = <FILEIN>;
+		chop @lines;
+	} else {
+		@lines = split("\n", `strings $filepath`);
+	}
+	
+	@lines = grep { m/$regex/ } @lines;
+	next unless @lines;	
+
+	if ($flag) {
+		print "$filepath\n";
+	} else {
+		foreach $line (@lines) {
+			print "$filepath:$line\n";
+		}
+	}
+}

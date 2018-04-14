@@ -1,0 +1,56 @@
+#!/usr/bin/perl -w
+
+# puts old shafile and new shafile into respective hashes then,
+# goes through the hashes searching for differences, removing any matches
+# from both hashes. After searching through oldshas, only new files will
+# be left in the newsha hash.
+
+if ($#ARGV != 1) { # usage
+	print "Usage: verifile rootfile sha256file\n";
+	exit;
+}
+
+# first open sha256file and store in a hash
+open(SHAFILE, $ARGV[1]) or die "could not open $ARGV[1]: $!";
+@oldshas = sort @oldshas = <SHAFILE>;
+chop @oldshas;
+foreach $line (@oldshas) {
+	$line =~ m/(\S+)\s+(\S+)/;
+	$oldshas{$1} = $line;
+}
+
+# do the same for the rootfile, but we must first create the new mysha list
+open(ROOTFILE, $ARGV[0]) or die "could not open $ARGV[0]: $!";
+while ($line = <ROOTFILE>) {
+	chop $line;
+	push(@filepaths, split("\n", `find $line -type f`));
+	while ( $filepath = shift @filepaths ) {
+		$newshas{$filepath} = `sha256sum $filepath`;
+		$newshas{$filepath} =~ s/(\S+)\s+(\S+)\n/$2\t$1/;
+	}
+}
+
+# search for matching filepaths in both hashes, remove matches
+foreach $key (sort keys %oldshas) {
+	$new = ""; #initialize new because we don't know if the filepath exists in the hash
+	$old = delete $oldshas{$key};
+	$new = delete $newshas{$key} if $newshas{$key};
+
+	next if $old eq $new; # skip if no change
+	print "\n" if $i++; # fence post newlines
+
+	if ($new) { # if it made it here, then both files exist but are different
+		print "<old>$old\n";
+		print "<new>$new\n";
+	} else {
+		print "<old>$old\n";
+		print "<new>\n";
+	}
+}
+
+# only new files will be left, so we print them
+foreach $key (sort keys %newshas) {
+	print "\n" if $i++; # fence post
+	print "<old>\n";
+	print "<new>$newshas{$key}\n";
+}

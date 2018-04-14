@@ -1,0 +1,55 @@
+#!/usr/bin/perl -w
+
+# Usage: ddiff [-ds12] <directory1> <directory2>
+# Will compare two directories for differences in regular files
+# Regular files with same names should be tested with `/usr/bin/diff -q` (determines whether they are identical)
+
+# -1: <<< file1 if a file was found only in dir1
+# -2: >>> file2 if a file was found only in dir2
+# -d: < file > if same name but diff
+# -s: > file < if same files
+
+$flags = "-12ds";
+$flags = shift if $#ARGV >= 2;
+
+$dir1 = $ARGV[0];
+$dir1 .= '/' if !($dir1 =~ m/\/$/);
+
+$dir2 = $ARGV[1];
+$dir2 .= '/' if !($dir2 =~ m/\/$/);
+
+@dirfiles1 = split " ", `ls $dir1`;
+@dirfiles2 = split " ", `ls $dir2`;
+
+while ($f1 = shift @dirfiles1) {
+	$fp1 = $dir1.$f1;
+	$i = 0;
+	foreach $f2 (@dirfiles2) { # is f1 in dir2?
+		$fp2 = $dir2.$f2;
+		if ($f1 lt $f2) { # file1 is only in dir1
+			push(@one, "<<< $f1");
+			last;
+		}
+		if ($f1 eq $f2) { # if same name # if they match put < file > shift dir2
+			if (`/usr/bin/diff -q $fp1 $fp2`) { # if files are different > file < shift dir2
+				push @d, "< $f1 >";
+			} else { # else < file > shift dir2 
+				push @s, "> $f1 <";
+			}
+			splice(@dirfiles2, $i, 1); # remove current file from dir2
+			last;
+		}
+		$i++;
+	}		
+}
+
+# all files left in dir2 are not in dir1
+foreach $f2 (@dirfiles2) { # file >>>
+	push @two, ">>> $f2";
+}
+
+push(@ddiff, @one) if $flags =~ m/1/;
+push(@ddiff, @two) if $flags =~ m/2/;
+push(@ddiff, @d) if $flags =~ m/d/;
+push(@ddiff, @s) if $flags =~ m/s/;
+print join("\n", @ddiff), "\n";

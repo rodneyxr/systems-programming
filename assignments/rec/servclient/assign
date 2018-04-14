@@ -1,0 +1,6 @@
+Write a program that follows a client-server paradigm.
+The server receives the name of the command to run from the client and
+returns the output though a privated named-pipe. Can use popen and pclose for
+running a command.
+
+The client sends the name of the private pipe to the server.
